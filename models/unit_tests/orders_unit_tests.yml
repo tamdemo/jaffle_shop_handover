@@ -1,0 +1,29 @@
+unit_tests:
+  - name: orders_payment_method_pivot
+    description: >
+      Pivots payments per order into one column per payment method and sums them into amount.
+      Covers mixed methods on one order, multiple payments of the same method, and an order
+      with no payments (left join leaves every amount column NULL; the not_null tests on
+      orders catch this case in real data).
+    model: orders
+    given:
+      - input: ref('stg_orders')
+        rows:
+          - {order_id: 1, customer_id: 10, order_date: '2018-01-01', status: completed}
+          - {order_id: 2, customer_id: 20, order_date: '2018-01-02', status: shipped}
+          - {order_id: 3, customer_id: 30, order_date: '2018-01-03', status: placed}
+      - input: ref('stg_payments')
+        rows:
+          - {payment_id: 1, order_id: 1, payment_method: credit_card, amount: 10}
+          - {payment_id: 2, order_id: 1, payment_method: coupon, amount: 5}
+          - {payment_id: 3, order_id: 2, payment_method: bank_transfer, amount: 7}
+          - {payment_id: 4, order_id: 2, payment_method: bank_transfer, amount: 3}
+          - {payment_id: 5, order_id: 2, payment_method: gift_card, amount: 2}
+    expect:
+      rows:
+        - {order_id: 1, customer_id: 10, order_date: '2018-01-01', status: completed,
+           credit_card_amount: 10, coupon_amount: 5, bank_transfer_amount: 0, gift_card_amount: 0, amount: 15}
+        - {order_id: 2, customer_id: 20, order_date: '2018-01-02', status: shipped,
+           credit_card_amount: 0, coupon_amount: 0, bank_transfer_amount: 10, gift_card_amount: 2, amount: 12}
+        - {order_id: 3, customer_id: 30, order_date: '2018-01-03', status: placed,
+           credit_card_amount: null, coupon_amount: null, bank_transfer_amount: null, gift_card_amount: null, amount: null}
