@@ -14,8 +14,20 @@ models:
         tests:
           - unique
           - not_null
+      - name: customer_id
+        description: Renamed from raw_orders.user_id; every order must belong to a known customer.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+      - name: order_date
+        tests:
+          - not_null
       - name: status
         tests:
+          - not_null
           - accepted_values:
               arguments:
                 values: ['placed', 'shipped', 'completed', 'return_pending', 'returned']

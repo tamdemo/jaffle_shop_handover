@@ -1,0 +1,28 @@
+unit_tests:
+  - name: stg_orders_renames_and_passes_through_columns
+    description: id -> order_id, user_id -> customer_id; order_date and status pass through unchanged, one row per raw order.
+    model: stg_orders
+    given:
+      - input: ref('raw_orders')
+        rows:
+          - {id: 1, user_id: 10, order_date: '2018-01-01', status: placed}
+          - {id: 2, user_id: 10, order_date: '2018-02-15', status: shipped}
+          - {id: 3, user_id: 20, order_date: '2018-03-31', status: completed}
+          - {id: 4, user_id: 30, order_date: '2018-04-09', status: return_pending}
+          - {id: 5, user_id: 30, order_date: '2018-04-09', status: returned}
+    expect:
+      rows:
+        - {order_id: 1, customer_id: 10, order_date: '2018-01-01', status: placed}
+        - {order_id: 2, customer_id: 10, order_date: '2018-02-15', status: shipped}
+        - {order_id: 3, customer_id: 20, order_date: '2018-03-31', status: completed}
+        - {order_id: 4, customer_id: 30, order_date: '2018-04-09', status: return_pending}
+        - {order_id: 5, customer_id: 30, order_date: '2018-04-09', status: returned}
+
+  - name: stg_orders_empty_input_yields_no_rows
+    description: Edge case - an empty raw_orders produces an empty stg_orders.
+    model: stg_orders
+    given:
+      - input: ref('raw_orders')
+        rows: []
+    expect:
+      rows: []
