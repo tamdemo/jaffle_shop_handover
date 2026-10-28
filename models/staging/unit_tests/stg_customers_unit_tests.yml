@@ -1,0 +1,30 @@
+unit_tests:
+  - name: stg_customers_renames_id_and_passes_names_through
+    description: id is renamed to customer_id; first_name/last_name pass through unchanged, including NULLs.
+    model: stg_customers
+    given:
+      - input: ref('raw_customers')
+        rows:
+          - {id: 1, first_name: Michael, last_name: P.}
+          - {id: 2, first_name: null, last_name: M.}
+          - {id: 3, first_name: Kathleen, last_name: null}
+          - {id: 4, first_name: null, last_name: null}
+    expect:
+      rows:
+        - {customer_id: 1, first_name: Michael, last_name: P.}
+        - {customer_id: 2, first_name: null, last_name: M.}
+        - {customer_id: 3, first_name: Kathleen, last_name: null}
+        - {customer_id: 4, first_name: null, last_name: null}
+
+  - name: stg_customers_customer_id_is_integer
+    description: Typed SQL fixture (integer id, varchar names) maps to customer_id/first_name/last_name; actual INTEGER type of the built relation is asserted by singular test stg_customers__customer_id_is_integer.
+    model: stg_customers
+    given:
+      - input: ref('raw_customers')
+        format: sql
+        rows: |
+          select 10::integer as id, 'Ann'::varchar as first_name, 'B.'::varchar as last_name
+    expect:
+      format: sql
+      rows: |
+        select 10::integer as customer_id, 'Ann'::varchar as first_name, 'B.'::varchar as last_name
