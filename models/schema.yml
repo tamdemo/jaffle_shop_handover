@@ -37,6 +37,10 @@ models:
         tests:
           - unique
           - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
         description: This is a unique identifier for an order
 
       - name: customer_id
@@ -50,10 +54,13 @@ models:
 
       - name: order_date
         description: Date (UTC) that the order was placed
+        tests:
+          - not_null
 
       - name: status
         description: '{{ doc("orders_status") }}'
         tests:
+          - not_null
           - accepted_values:
               arguments:
                 values: ['placed', 'shipped', 'completed', 'return_pending', 'returned']
