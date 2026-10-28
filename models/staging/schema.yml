@@ -2,32 +2,89 @@ version: 2
 
 models:
   - name: stg_customers
+    description: One row per customer, renamed from the raw_customers seed
     columns:
       - name: customer_id
+        description: Unique identifier for a customer (raw_customers.id)
         tests:
           - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('raw_customers')
+                field: id
+      - name: first_name
+        description: Customer's first name. PII.
+        tests:
+          - not_null
+      - name: last_name
+        description: Customer's last name (initial only in source). PII.
+        tests:
           - not_null
 
   - name: stg_orders
+    description: One row per order, renamed from the raw_orders seed
     columns:
       - name: order_id
+        description: Unique identifier for an order (raw_orders.id)
         tests:
           - unique
           - not_null
-      - name: status
+          - relationships:
+              arguments:
+                to: ref('raw_orders')
+                field: id
+      - name: customer_id
+        description: Foreign key to stg_customers (raw_orders.user_id)
         tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+      - name: order_date
+        description: Date (UTC) that the order was placed
+        tests:
+          - not_null
+      - name: status
+        description: '{{ doc("orders_status") }}'
+        tests:
+          - not_null
           - accepted_values:
               arguments:
                 values: ['placed', 'shipped', 'completed', 'return_pending', 'returned']
 
   - name: stg_payments
+    description: One row per payment, renamed from the raw_payments seed; an order can have several payments
     columns:
       - name: payment_id
+        description: Unique identifier for a payment (raw_payments.id)
         tests:
           - unique
           - not_null
-      - name: payment_method
+          - relationships:
+              arguments:
+                to: ref('raw_payments')
+                field: id
+      - name: order_id
+        description: Foreign key to stg_orders
         tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: payment_method
+        description: Method used for the payment
+        tests:
+          - not_null
           - accepted_values:
               arguments:
                 values: ['credit_card', 'coupon', 'bank_transfer', 'gift_card']
+      - name: amount
+        description: Payment amount in AUD (raw_payments.amount is in cents and divided by 100)
+        tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
