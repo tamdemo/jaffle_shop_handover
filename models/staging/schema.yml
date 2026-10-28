@@ -2,10 +2,17 @@ version: 2
 
 models:
   - name: stg_customers
+    description: One row per customer; 1:1 rename of seed raw_customers (id -> customer_id).
     columns:
       - name: customer_id
         tests:
           - unique
+          - not_null
+      - name: first_name
+        tests:
+          - not_null
+      - name: last_name
+        tests:
           - not_null
 
   - name: stg_orders
