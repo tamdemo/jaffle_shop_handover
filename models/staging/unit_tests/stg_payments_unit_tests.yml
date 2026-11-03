@@ -1,0 +1,36 @@
+unit_tests:
+  - name: stg_payments_converts_cents_to_dollars_and_renames_id
+    description: >
+      Renames id -> payment_id and converts amount from cents to dollars,
+      including non-round values and zero. DuckDB int / 100 yields DOUBLE
+      (not integer division), so 1050 -> 10.5 and 1 -> 0.01.
+    model: stg_payments
+    given:
+      - input: ref('raw_payments')
+        rows:
+          - {id: 1, order_id: 10, payment_method: credit_card, amount: 1050}
+          - {id: 2, order_id: 10, payment_method: coupon, amount: 1}
+          - {id: 3, order_id: 11, payment_method: bank_transfer, amount: 0}
+          - {id: 4, order_id: 12, payment_method: gift_card, amount: 2000}
+          - {id: 5, order_id: 13, payment_method: credit_card, amount: 99}
+    expect:
+      rows:
+        - {payment_id: 1, order_id: 10, payment_method: credit_card, amount: 10.5}
+        - {payment_id: 2, order_id: 10, payment_method: coupon, amount: 0.01}
+        - {payment_id: 3, order_id: 11, payment_method: bank_transfer, amount: 0}
+        - {payment_id: 4, order_id: 12, payment_method: gift_card, amount: 20}
+        - {payment_id: 5, order_id: 13, payment_method: credit_card, amount: 0.99}
+
+  - name: stg_payments_amount_is_double_not_integer_division
+    description: >
+      Asserts DuckDB `/` returns a DOUBLE for integer cents (no truncation).
+    model: stg_payments
+    given:
+      - input: ref('raw_payments')
+        format: sql
+        rows: |
+          select 7 as id, 20 as order_id, 'coupon' as payment_method, 1 as amount
+    expect:
+      format: sql
+      rows: |
+        select 7 as payment_id, 20 as order_id, 'coupon' as payment_method, cast(0.01 as double) as amount

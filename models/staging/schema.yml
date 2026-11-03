@@ -26,8 +26,20 @@ models:
         tests:
           - unique
           - not_null
+      - name: order_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
       - name: payment_method
         tests:
+          - not_null
           - accepted_values:
               arguments:
                 values: ['credit_card', 'coupon', 'bank_transfer', 'gift_card']
+      - name: amount
+        description: Payment amount in dollars (raw cents / 100).
+        tests:
+          - not_null
