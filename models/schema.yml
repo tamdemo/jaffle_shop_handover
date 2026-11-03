@@ -13,9 +13,13 @@ models:
 
       - name: first_name
         description: Customer's first name. PII.
+        tests:
+          - not_null
 
       - name: last_name
         description: Customer's last name. PII.
+        tests:
+          - not_null
 
       - name: first_order
         description: Date (UTC) of a customer's first order
@@ -28,6 +32,12 @@ models:
 
       - name: total_order_amount
         description: Total value (AUD) of a customer's orders
+
+      - name: customer_lifetime_value
+        description: >
+          Total value (AUD) of a customer's payments across all of their orders.
+          NULL for customers with no orders (left join); non-null/range/reconciliation
+          checks live in tests/customers__*.sql.
 
   - name: orders
     description: This table has basic information about orders, as well as some derived facts based on payments

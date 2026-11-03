@@ -1,0 +1,57 @@
+unit_tests:
+  - name: customers_aggregates_orders_and_payments
+    description: >
+      first_order/most_recent_order are min/max order_date, number_of_orders is the
+      order count, customer_lifetime_value sums payments across multiple orders and
+      multiple payments per order; customers with no orders get NULLs.
+    model: customers
+    given:
+      - input: ref('stg_customers')
+        rows:
+          - {customer_id: 1, first_name: Ann, last_name: A.}
+          - {customer_id: 2, first_name: Bob, last_name: B.}
+          - {customer_id: 3, first_name: Cat, last_name: C.}
+      - input: ref('stg_orders')
+        rows:
+          - {order_id: 10, customer_id: 1, order_date: '2018-01-05', status: completed}
+          - {order_id: 11, customer_id: 1, order_date: '2018-01-01', status: returned}
+          - {order_id: 12, customer_id: 1, order_date: '2018-03-10', status: placed}
+          - {order_id: 20, customer_id: 2, order_date: '2018-02-02', status: shipped}
+      - input: ref('stg_payments')
+        rows:
+          - {payment_id: 100, order_id: 10, payment_method: credit_card, amount: 10.5}
+          - {payment_id: 101, order_id: 10, payment_method: coupon, amount: 2.0}
+          - {payment_id: 102, order_id: 11, payment_method: bank_transfer, amount: 7.25}
+          - {payment_id: 103, order_id: 12, payment_method: gift_card, amount: 0.0}
+          - {payment_id: 200, order_id: 20, payment_method: credit_card, amount: 30.0}
+    expect:
+      rows:
+        - {customer_id: 1, first_name: Ann, last_name: A., first_order: '2018-01-01', most_recent_order: '2018-03-10', number_of_orders: 3, customer_lifetime_value: 19.75}
+        - {customer_id: 2, first_name: Bob, last_name: B., first_order: '2018-02-02', most_recent_order: '2018-02-02', number_of_orders: 1, customer_lifetime_value: 30.0}
+        - {customer_id: 3, first_name: Cat, last_name: C., first_order: null, most_recent_order: null, number_of_orders: null, customer_lifetime_value: null}
+
+  - name: customers_order_without_payments_has_null_lifetime_value
+    description: >
+      Documents current behavior: an order with no payment rows is counted in
+      number_of_orders, but customer_lifetime_value is NULL (not 0) when none of the
+      customer's orders have payments.
+    model: customers
+    given:
+      - input: ref('stg_customers')
+        rows:
+          - {customer_id: 1, first_name: Ann, last_name: A.}
+      - input: ref('stg_orders')
+        rows:
+          - {order_id: 10, customer_id: 1, order_date: '2018-01-05', status: placed}
+      - input: ref('stg_payments')
+        format: sql
+        rows: |
+          select
+              cast(null as integer) as payment_id,
+              cast(null as integer) as order_id,
+              cast(null as varchar) as payment_method,
+              cast(null as double) as amount
+          where false
+    expect:
+      rows:
+        - {customer_id: 1, first_name: Ann, last_name: A., first_order: '2018-01-05', most_recent_order: '2018-01-05', number_of_orders: 1, customer_lifetime_value: null}
